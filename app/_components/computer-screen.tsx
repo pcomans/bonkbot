@@ -101,7 +101,9 @@ export function ComputerScreen({ open, onClose }: { readonly open: boolean; read
   return (
     <aside
       aria-label="bonkbot's screen"
-      className="fixed inset-x-4 top-16 z-30 overflow-hidden rounded-xl border bg-background shadow-lg lg:inset-x-auto lg:right-6 lg:w-[480px]"
+      // Small screens: in the page flow above the chat, so it never covers the composer.
+      // Large screens: a side panel the chat makes room for.
+      className="z-30 mx-4 mt-14 shrink-0 overflow-hidden rounded-xl border bg-background shadow-lg lg:fixed lg:top-16 lg:right-6 lg:mx-0 lg:mt-0 lg:w-[480px]"
     >
       <div className="flex items-center justify-between border-b px-3 py-2">
         <div className="flex items-center gap-2 text-sm">

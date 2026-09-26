@@ -104,7 +104,11 @@ export function createLogins(run: RunOnComputer) {
       await authJson(`agent-browser auth login "$NAME"${noNavigate ? " --no-navigate" : ""} --json`, {
         NAME: profileName,
       });
-      return `Signed in with the "${profileName}" login.`;
+      // auth login returns right after clicking submit; let the resulting
+      // navigation start and finish so the reported page is where it landed.
+      await run("sleep 1; agent-browser wait --load load");
+      const [url, title] = await Promise.all([run("agent-browser get url"), run("agent-browser get title")]);
+      return `Submitted the "${profileName}" login. The browser is now on "${title.stdout.trim()}" (${url.stdout.trim()}).`;
     },
   };
 }

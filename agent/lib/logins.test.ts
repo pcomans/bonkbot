@@ -27,6 +27,9 @@ function fakeComputer({ saved = [] as { name: string; url: string; username: str
       return ok({ deleted: env.NAME });
     }
     if (command.startsWith("agent-browser auth login")) return ok({ loggedIn: true, name: env.NAME });
+    if (command.includes("agent-browser wait --load")) return { exitCode: 0, stdout: "", stderr: "" };
+    if (command === "agent-browser get url") return { exitCode: 0, stdout: "https://example.com/secure\n", stderr: "" };
+    if (command === "agent-browser get title") return { exitCode: 0, stdout: "Secure Area\n", stderr: "" };
     throw new Error(`unexpected command: ${command}`);
   });
 
@@ -96,11 +99,13 @@ describe("logins", () => {
     const computer = fakeComputer();
     const logins = createLogins(computer.run);
 
-    expect(await logins.signIn({ name: "Amazon.com" })).toBe('Signed in with the "amazon-com" login.');
-    expect(computer.calls.at(-1)).toEqual({ command: 'agent-browser auth login "$NAME" --json', env: { NAME: "amazon-com" } });
+    expect(await logins.signIn({ name: "Amazon.com" })).toBe(
+      'Submitted the "amazon-com" login. The browser is now on "Secure Area" (https://example.com/secure).',
+    );
+    expect(computer.calls).toContainEqual({ command: 'agent-browser auth login "$NAME" --json', env: { NAME: "amazon-com" } });
 
     await logins.signIn({ name: "amazon-com", noNavigate: true });
-    expect(computer.calls.at(-1)?.command).toBe('agent-browser auth login "$NAME" --no-navigate --json');
+    expect(computer.calls.map((call) => call.command)).toContain('agent-browser auth login "$NAME" --no-navigate --json');
 
     computer.run.mockResolvedValueOnce({
       exitCode: 1,
@@ -120,5 +125,18 @@ describe("logins", () => {
 
     expect(computer.profiles).toEqual([]);
     expect(computer.requests()).toEqual([]);
+  });
+
+  it("waits for the page after submitting, so the result reflects where the login landed", async () => {
+    const computer = fakeComputer();
+
+    await createLogins(computer.run).signIn({ name: "x" });
+
+    const commands = computer.calls.map((call) => call.command);
+    const login = commands.findIndex((command) => command.startsWith("agent-browser auth login"));
+    const wait = commands.findIndex((command) => command.includes("agent-browser wait --load"));
+    const url = commands.indexOf("agent-browser get url");
+    expect(login).toBeLessThan(wait);
+    expect(wait).toBeLessThan(url);
   });
 });
