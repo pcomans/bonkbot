@@ -2,7 +2,7 @@
 
 import type { UserContent } from "ai";
 import { useEveAgent } from "eve/react";
-import { AlertCircleIcon, BrainIcon, PlusIcon, SquareIcon } from "lucide-react";
+import { AlertCircleIcon, BrainIcon, KeyRoundIcon, PlusIcon, SquareIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
   Conversation,
@@ -143,8 +143,14 @@ export function AgentChat({
       {showConversationLayout ? (
         <ChatHeader canStartNewChat={activeSessionId !== undefined} screenOpen={screenOpen} />
       ) : null}
-      <div className="fixed top-3 left-6 z-30">
+      <div className="fixed top-3 left-6 z-30 flex gap-1">
         <ScreenToggle onToggle={() => setScreenOpen(!screenOpen)} open={screenOpen} />
+        <Button asChild size="sm" variant="ghost">
+          <a aria-label="Logins" href="/vault">
+            <KeyRoundIcon className="size-4" />
+            <span className="hidden font-normal text-sm sm:inline">Logins</span>
+          </a>
+        </Button>
       </div>
       <ComputerScreen onClose={() => setScreenOpen(false)} open={screenOpen} />
 
