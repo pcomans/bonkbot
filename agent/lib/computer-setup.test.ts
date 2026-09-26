@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { FRAME_PATH, SETUP_SCRIPT, provisionComputer } from "./computer-setup";
+import { FRAME_META_PATH, FRAME_PATH, SETUP_SCRIPT, provisionComputer } from "./computer-setup";
 
 function fakeSandbox(result: { exitCode: number; stdout?: string; stderr?: string }) {
   return { run: vi.fn(async () => ({ stdout: "", stderr: "", ...result })) };
@@ -52,5 +52,16 @@ describe("SETUP_SCRIPT", () => {
   it("detects the browser by Chrome's exact profile flag", () => {
     expect(SETUP_SCRIPT).toContain('pgrep -f -- "--user-data-dir=$AGENT_BROWSER_PROFILE"');
     expect(SETUP_SCRIPT).not.toContain('pgrep -f "$AGENT_BROWSER_PROFILE"');
+  });
+
+  it("records the page URL and when the frame last changed", () => {
+    expect(SETUP_SCRIPT).toContain(FRAME_META_PATH);
+    expect(SETUP_SCRIPT).toContain("agent-browser get url");
+    // Only a changed frame bumps changedAt, so an idle tab reads as idle.
+    expect(SETUP_SCRIPT).toMatch(/cmp -s/);
+  });
+
+  it("stops a recorder from an older setup so the new one can take the lock", () => {
+    expect(SETUP_SCRIPT).toContain("pkill -f '^/bin/bash /usr/local/bin/bonkbot-recorder' || true");
   });
 });

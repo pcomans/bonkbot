@@ -7,8 +7,12 @@ import { cn } from "@/lib/utils";
 import { BonkbotIdle } from "./bonkbot-art";
 
 const POLL_MS = 2500;
+/** A browser whose picture has not changed for this long is shown as idle. */
+const IDLE_AFTER_MS = 30_000;
 
-type Screen = { state: "loading" | "asleep" | "no-browser" | "error" } | { state: "live"; url: string };
+type Screen =
+  | { state: "loading" | "asleep" | "no-browser" | "error" }
+  | { state: "live"; src: string; pageUrl?: string; changedAt?: number };
 
 const MESSAGES: Record<Exclude<Screen["state"], "live">, string> = {
   loading: "Connecting to the computer…",
@@ -30,13 +34,15 @@ function useComputerScreen(enabled: boolean): Screen {
       if (document.visibilityState === "visible") {
         try {
           const response = await fetch("/api/computer/screen", { cache: "no-store" });
-          const next: Screen =
+          const next: Screen | null =
             response.status === 200
-              ? { state: "live", url: URL.createObjectURL(await response.blob()) }
+              ? await decodedFrame(await response.blob(), response.headers)
               : { state: response.headers.get("x-computer-state") === "no-browser" ? "no-browser" : "asleep" };
-          if (!cancelled) {
+          if (next && cancelled && next.state === "live") URL.revokeObjectURL(next.src);
+          // A frame that fails to decode keeps the previous picture on screen.
+          if (next && !cancelled) {
             setScreen((previous) => {
-              if (previous.state === "live") URL.revokeObjectURL(previous.url);
+              if (previous.state === "live") URL.revokeObjectURL(previous.src);
               return next;
             });
           }
@@ -57,9 +63,40 @@ function useComputerScreen(enabled: boolean): Screen {
   return screen;
 }
 
+/** Decodes a frame fully before showing it, so a bad frame never renders as broken. */
+async function decodedFrame(blob: Blob, headers: Headers): Promise<Screen | null> {
+  const src = URL.createObjectURL(blob);
+  try {
+    const image = new Image();
+    image.src = src;
+    await image.decode();
+  } catch {
+    URL.revokeObjectURL(src);
+    return null;
+  }
+  return {
+    state: "live",
+    src,
+    pageUrl: decodeHeader(headers.get("x-frame-url")),
+    changedAt: Number(headers.get("x-frame-changed-at")) * 1000 || undefined,
+  };
+}
+
+function decodeHeader(value: string | null): string | undefined {
+  if (!value) return undefined;
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return undefined;
+  }
+}
+
 export function ComputerScreen({ open, onClose }: { readonly open: boolean; readonly onClose: () => void }) {
   const screen = useComputerScreen(open);
   if (!open) return null;
+  const idleFor =
+    screen.state === "live" && screen.changedAt !== undefined ? Date.now() - screen.changedAt : 0;
+  const idle = idleFor > IDLE_AFTER_MS;
 
   return (
     <aside
@@ -70,12 +107,14 @@ export function ComputerScreen({ open, onClose }: { readonly open: boolean; read
         <div className="flex items-center gap-2 text-sm">
           <span
             className={cn(
-              "size-2 rounded-full",
-              screen.state === "live" ? "bg-green-500" : "bg-muted-foreground/40",
+              "size-2 shrink-0 rounded-full",
+              screen.state === "live" && !idle ? "bg-green-500" : "bg-muted-foreground/40",
             )}
           />
           <span className="font-medium">Screen</span>
-          <span className="text-muted-foreground">{screen.state === "live" ? "live · every 2.5s" : ""}</span>
+          <span className="text-muted-foreground">
+            {screen.state === "live" ? (idle ? `idle · no change for ${formatDuration(idleFor)}` : "live") : ""}
+          </span>
         </div>
         <Button aria-label="Close screen" onClick={onClose} size="icon" variant="ghost">
           <XIcon className="size-4" />
@@ -84,7 +123,11 @@ export function ComputerScreen({ open, onClose }: { readonly open: boolean; read
       <div className="flex aspect-video items-center justify-center bg-background">
         {screen.state === "live" ? (
           // biome-ignore lint/performance/noImgElement: blob URL frames
-          <img alt="bonkbot's browser" className="size-full object-contain" src={screen.url} />
+          <img
+            alt="bonkbot's browser"
+            className={cn("size-full object-contain transition-opacity", idle && "opacity-50")}
+            src={screen.src}
+          />
         ) : (
           <div className="flex flex-col items-center gap-2 px-6 text-center">
             {screen.state === "asleep" ? <BonkbotIdle className="size-28" /> : null}
@@ -92,8 +135,18 @@ export function ComputerScreen({ open, onClose }: { readonly open: boolean; read
           </div>
         )}
       </div>
+      {screen.state === "live" && screen.pageUrl ? (
+        <p className="truncate border-t px-3 py-1.5 font-mono text-muted-foreground text-xs" title={screen.pageUrl}>
+          {screen.pageUrl}
+        </p>
+      ) : null}
     </aside>
   );
+}
+
+function formatDuration(ms: number): string {
+  const minutes = Math.floor(ms / 60_000);
+  return minutes < 1 ? `${Math.floor(ms / 1000)}s` : minutes < 60 ? `${minutes}m` : `${Math.floor(minutes / 60)}h`;
 }
 
 export function ScreenToggle({ open, onToggle }: { readonly open: boolean; readonly onToggle: () => void }) {
