@@ -1,6 +1,7 @@
 import { ArrowLeftIcon, KeyRoundIcon } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { appAccessAllowed } from "@/agent/lib/access";
 import type { Login } from "@/agent/lib/logins";
 import { computerLogins } from "@/app/_lib/computer-logins";
 import { Badge } from "@/components/ui/badge";
@@ -11,7 +12,7 @@ import { deleteLogin, saveLogin } from "./actions";
 export const dynamic = "force-dynamic";
 
 export default async function VaultPage() {
-  if (process.env.NODE_ENV === "production") notFound();
+  if (!appAccessAllowed()) notFound();
   let logins: Login[];
   try {
     logins = await (await computerLogins()).listLogins();

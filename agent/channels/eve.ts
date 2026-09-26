@@ -1,5 +1,6 @@
 import { eveChannel } from "eve/channels/eve";
-import { localDev, placeholderAuth, vercelOidc } from "eve/channels/auth";
+import { localDev, none, placeholderAuth, vercelOidc } from "eve/channels/auth";
+import { appAccessAllowed } from "../lib/access";
 
 export default eveChannel({
   auth: [
@@ -7,9 +8,9 @@ export default eveChannel({
     vercelOidc(),
     // Open on localhost for `eve dev` and the REPL; ignored in production.
     localDev(),
-    // This placeholder will not allow browser requests in production.
-    // Replace it with your app's auth provider, like Auth.js or Clerk,
-    // or use none() for a public demo.
-    placeholderAuth(),
+    // The browser chat has no login of its own: behind Vercel Deployment
+    // Protection (BONKBOT_DEPLOYMENT_PROTECTED=1) only the owner reaches it.
+    // Otherwise the placeholder keeps production browser requests out.
+    appAccessAllowed() ? none() : placeholderAuth(),
   ],
 });
