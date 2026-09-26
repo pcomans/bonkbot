@@ -10,3 +10,4 @@ dist
 *.tsbuildinfo
 .claude/
 .probe.mjs
+demo/video/

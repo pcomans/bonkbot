@@ -104,8 +104,10 @@ export function AgentChat({
     setCancellationError(undefined);
     const options = isBusy ? { turnPolicy: "steer" as const } : undefined;
 
+    // send() resolves when bonkbot's turn ends; don't wait for it, so the
+    // composer clears right away. Send errors surface through agent.error.
     if (message.files.length === 0) {
-      await agent.send(text, options);
+      void agent.send(text, options);
       return;
     }
 
@@ -122,7 +124,7 @@ export function AgentChat({
       });
     }
 
-    await agent.send(parts, options);
+    void agent.send(parts, options);
   };
 
   const composer = (

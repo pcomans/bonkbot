@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Leadbox (demo)</title>
+<style>
+  :root { --ink: #16181d; --muted: #6b7280; --line: #e5e7eb; --accent: #4f46e5; --bg: #f7f7f9; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 15px/1.5 -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--ink); background: var(--bg); }
+  header { display: flex; align-items: center; justify-content: space-between; padding: 14px 28px; background: #fff; border-bottom: 1px solid var(--line); }
+  .brand { font-weight: 700; font-size: 18px; letter-spacing: -0.02em; }
+  .brand span { color: var(--accent); }
+  .tag { font-size: 12px; color: var(--muted); margin-left: 8px; font-weight: 400; }
+  main { max-width: 860px; margin: 32px auto; padding: 0 20px; }
+  .card { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 24px; }
+  .login { max-width: 380px; margin: 80px auto; }
+  h1 { font-size: 22px; margin: 0 0 16px; }
+  label { display: block; font-size: 13px; color: var(--muted); margin: 12px 0 4px; }
+  input { width: 100%; padding: 9px 11px; border: 1px solid var(--line); border-radius: 8px; font: inherit; }
+  button { margin-top: 16px; padding: 9px 16px; border: 0; border-radius: 8px; background: var(--accent); color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
+  button.secondary { background: #fff; color: var(--ink); border: 1px solid var(--line); margin-top: 0; }
+  .error { color: #b91c1c; font-size: 13px; margin-top: 10px; min-height: 18px; }
+  .toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  table { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  th, td { text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--line); }
+  th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); background: #fafafa; }
+  tr:last-child td { border-bottom: 0; }
+  .empty { color: var(--muted); text-align: center; padding: 28px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
+  .hidden { display: none; }
+  .count { color: var(--muted); font-size: 14px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">Lead<span>box</span><span class="tag">demo CRM, not a real product</span></div>
+  <button id="logout" class="secondary hidden" type="button">Sign out</button>
+</header>
+
+<main>
+  <section id="login-view" class="card login hidden">
+    <h1>Sign in to Leadbox</h1>
+    <form id="login-form">
+      <label for="email">Email</label>
+      <input id="email" name="email" type="email" autocomplete="username" required>
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" required>
+      <button type="submit">Sign in</button>
+      <div class="error" id="login-error"></div>
+    </form>
+  </section>
+
+  <section id="leads-view" class="hidden">
+    <div class="toolbar">
+      <div><h1 style="margin:0">Leads</h1><div class="count" id="count"></div></div>
+      <button id="new-lead" type="button">Add lead</button>
+    </div>
+    <form id="lead-form" class="card hidden" style="margin-bottom:16px">
+      <div class="grid">
+        <div><label for="lead-name">Full name</label><input id="lead-name" name="name" required></div>
+        <div><label for="lead-company">Company</label><input id="lead-company" name="company" required></div>
+        <div><label for="lead-email">Email</label><input id="lead-email" name="email" type="email" required></div>
+        <div><label for="lead-title">Job title</label><input id="lead-title" name="title"></div>
+      </div>
+      <button type="submit">Save lead</button>
+    </form>
+    <table>
+      <thead><tr><th>Name</th><th>Company</th><th>Email</th><th>Title</th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </section>
+</main>
+
+<script>
+  // Demo account for the recording. Leads live in this browser's localStorage.
+  const DEMO = { email: "demo@leadbox.test", password: "bonk-demo-2026" };
+  const $ = (id) => document.getElementById(id);
+  const leads = () => JSON.parse(localStorage.getItem("leadbox:leads") || "[]");
+  const signedIn = () => localStorage.getItem("leadbox:session") === DEMO.email;
+
+  function render() {
+    $("login-view").classList.toggle("hidden", signedIn());
+    $("leads-view").classList.toggle("hidden", !signedIn());
+    $("logout").classList.toggle("hidden", !signedIn());
+    const list = leads();
+    $("count").textContent = `${list.length} lead${list.length === 1 ? "" : "s"}`;
+    $("rows").innerHTML = list.length
+      ? list.map((l) => `<tr><td>${esc(l.name)}</td><td>${esc(l.company)}</td><td>${esc(l.email)}</td><td>${esc(l.title)}</td></tr>`).join("")
+      : `<tr><td colspan="4" class="empty">No leads yet.</td></tr>`;
+  }
+  const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+
+  $("login-form").addEventListener("submit", (e) => {
+    e.preventDefault();
+    if ($("email").value === DEMO.email && $("password").value === DEMO.password) {
+      localStorage.setItem("leadbox:session", DEMO.email);
+      render();
+    } else {
+      $("login-error").textContent = "Wrong email or password.";
+    }
+  });
+  $("logout").addEventListener("click", () => { localStorage.removeItem("leadbox:session"); render(); });
+  $("new-lead").addEventListener("click", () => { $("lead-form").classList.remove("hidden"); $("lead-name").focus(); });
+  $("lead-form").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const f = new FormData(e.target);
+    localStorage.setItem("leadbox:leads", JSON.stringify([...leads(), Object.fromEntries(f)]));
+    e.target.reset();
+    e.target.classList.add("hidden");
+    render();
+  });
+  render();
+</script>
+</body>
+</html>
