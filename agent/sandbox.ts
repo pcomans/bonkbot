@@ -2,10 +2,10 @@ import { Sandbox } from "@vercel/sandbox";
 import { defineSandbox } from "eve/sandbox";
 import { defineSandboxProvider } from "eve/sandbox/provider";
 import { VercelSandbox } from "eve/sandbox/vercel";
+import { COMPUTER_NAME } from "./lib/computer";
 import { provisionComputer } from "./lib/computer-setup";
 import { createSharedComputer, type InnerImplementation } from "./lib/shared-computer";
 
-const COMPUTER_NAME = "bonkbot-computer";
 const COMPUTER_TIMEOUT_MS = 30 * 60_000;
 
 // eve does not export its Vercel implementation, but every environment carries

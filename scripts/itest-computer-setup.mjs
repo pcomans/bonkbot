@@ -1,5 +1,9 @@
+// Integration test: runs the computer setup on a throwaway Vercel Sandbox and
+// checks the browser, recorder, and stop/resume behavior. Deletes the sandbox.
+// Run: set -a; . ./.env.local; set +a; node --experimental-strip-types scripts/itest-computer-setup.mjs
+
 import { Sandbox } from "@vercel/sandbox";
-import { SETUP_SCRIPT, FRAME_PATH } from "./agent/lib/computer-setup.ts";
+import { SETUP_SCRIPT, FRAME_PATH } from "../agent/lib/computer-setup.ts";
 const tpl = (await Sandbox.list({ limit: 20 })).sandboxes.find((s) => s.name.startsWith("eve-sbx-tpl-vercel-"));
 const snapshotId = (await Sandbox.get({ name: tpl.name })).currentSnapshotId;
 const NAME = "bonkbot-setup-test";

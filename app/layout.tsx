@@ -20,8 +20,8 @@ const mono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "gbot",
-  description: "A Next.js starter for eve agents with AI Elements.",
+  title: "bonkbot",
+  description: "An AI teammate with its own computer.",
 };
 
 export default function RootLayout({ children }: { readonly children: ReactNode }) {

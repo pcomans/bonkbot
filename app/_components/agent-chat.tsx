@@ -3,7 +3,7 @@
 import type { UserContent } from "ai";
 import { useEveAgent } from "eve/react";
 import { AlertCircleIcon, BrainIcon, PlusIcon, SquareIcon } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Conversation,
   ConversationContent,
@@ -23,9 +23,11 @@ import { Shimmer } from "@/components/ai-elements/shimmer";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { AgentMessage } from "./agent-message";
+import { ComputerScreen, ScreenToggle } from "./computer-screen";
 import { WEB_CHAT_AGENT } from "@/app/eve-agent";
 
-const DEFAULT_AGENT_NAME = "gbot";
+const DEFAULT_AGENT_NAME = "bonkbot";
+const SCREEN_OPEN_KEY = "bonkbot:screen-open";
 const AGENT_NAME = WEB_CHAT_AGENT ?? DEFAULT_AGENT_NAME;
 
 export function AgentChat({
@@ -37,6 +39,7 @@ export function AgentChat({
 }) {
   const [cancellationError, setCancellationError] = useState<string>();
   const [hasInputText, setHasInputText] = useState(false);
+  const [screenOpen, setScreenOpen] = useScreenOpen();
   const agent = useEveAgent({
     agent: WEB_CHAT_AGENT,
     initialSession:
@@ -129,10 +132,20 @@ export function AgentChat({
   );
 
   return (
-    <main className="flex h-dvh flex-col overflow-hidden bg-background text-foreground">
+    <main
+      className={cn(
+        "flex h-dvh flex-col overflow-hidden bg-background text-foreground",
+        // Make room for the screen panel on large screens instead of covering the chat.
+        screenOpen && "lg:pr-[504px]",
+      )}
+    >
       {showConversationLayout ? (
-        <ChatHeader canStartNewChat={activeSessionId !== undefined} />
+        <ChatHeader canStartNewChat={activeSessionId !== undefined} screenOpen={screenOpen} />
       ) : null}
+      <div className="fixed top-3 left-6 z-30">
+        <ScreenToggle onToggle={() => setScreenOpen(!screenOpen)} open={screenOpen} />
+      </div>
+      <ComputerScreen onClose={() => setScreenOpen(false)} open={screenOpen} />
 
       {showConversationLayout ? (
         <Conversation
@@ -176,12 +189,16 @@ export function AgentChat({
         className={cn(
           "mx-auto w-full px-4 sm:px-6",
           showConversationLayout
-            ? "fixed bottom-0 left-1/2 z-20 max-w-3xl -translate-x-1/2 bg-gradient-to-t from-background via-background to-transparent pt-4 pb-6"
+            ? cn(
+                "fixed right-0 bottom-0 left-0 z-20 max-w-3xl bg-gradient-to-t from-background via-background to-transparent pt-4 pb-6",
+                screenOpen && "lg:right-[504px]",
+              )
             : "flex max-w-xl flex-1 flex-col items-center justify-center gap-8 pb-[10vh]",
         )}
       >
         {showConversationLayout ? null : (
           <div className="flex flex-col items-center gap-3 text-center">
+            <BonkbotLogo className="size-28" />
             <h1 className="font-medium text-5xl tracking-tighter">{AGENT_NAME}</h1>
           </div>
         )}
@@ -240,11 +257,25 @@ function ErrorMessage({ message }: { readonly message: string }) {
   );
 }
 
-function ChatHeader({ canStartNewChat }: { readonly canStartNewChat: boolean }) {
+function ChatHeader({
+  canStartNewChat,
+  screenOpen,
+}: {
+  readonly canStartNewChat: boolean;
+  readonly screenOpen: boolean;
+}) {
   return (
-    <header className="pointer-events-none fixed top-0 right-0 left-0 z-20 h-14">
+    <header
+      className={cn(
+        "pointer-events-none fixed top-0 right-0 left-0 z-20 h-14",
+        screenOpen && "lg:right-[504px]",
+      )}
+    >
       <div className="relative mx-auto flex h-full w-full max-w-3xl items-center justify-center bg-background px-24">
-        <span className="truncate text-muted-foreground text-sm">{AGENT_NAME}</span>
+        <span className="flex items-center gap-2 truncate text-muted-foreground text-sm">
+          <BonkbotLogo className="size-6" />
+          {AGENT_NAME}
+        </span>
         {canStartNewChat ? (
           <Button
             aria-label="Start a new chat"
@@ -261,6 +292,28 @@ function ChatHeader({ canStartNewChat }: { readonly canStartNewChat: boolean }) 
       </div>
     </header>
   );
+}
+
+function BonkbotLogo({ className }: { readonly className?: string }) {
+  // biome-ignore lint/performance/noImgElement: small static logo
+  return <img alt="" className={cn("dark:invert", className)} src="/bonkbot.png" />;
+}
+
+/** Whether the screen panel is open, remembered per browser. */
+function useScreenOpen(): [boolean, (open: boolean) => void] {
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    try {
+      setOpen(window.localStorage.getItem(SCREEN_OPEN_KEY) === "1");
+    } catch {}
+  }, []);
+  const update = (next: boolean) => {
+    setOpen(next);
+    try {
+      window.localStorage.setItem(SCREEN_OPEN_KEY, next ? "1" : "0");
+    } catch {}
+  };
+  return [open, update];
 }
 
 function PendingThinking() {
