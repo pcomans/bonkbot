@@ -87,19 +87,23 @@ As a bonkbot user, I want my deployed bonkbot to be reachable only by me so that
 
 **Where it lives:** Vercel Deployment Protection ("All Deployments"), `agent/lib/access.ts`.
 
-## Attach images and files in the chat — In progress
+## Attach images and files in the chat — Done
 
 As a bonkbot user, I want to attach images and other files in the chat so that bonkbot can look at them and use them on its computer, for example to upload a photo to a website or edit a spreadsheet.
 
 **Acceptance criteria**
 
 - The chat box has an attach button, and pasting or dropping a file also attaches it.
+- Attached files show as removable previews before I send them.
 - bonkbot can see the content of attached images and PDFs.
 - bonkbot knows where each attached file is on its computer and can use it with `bash` or `agent-browser upload`.
-- Files too large to show the model directly still land on the computer and bonkbot can work with them there.
+- Files the model can't view directly (like a CSV) still land on the computer and bonkbot can work with them there.
+- A message's attachments can be up to 3 MB in total, and the chat box says so instead of failing.
 
-**Where it stands**
+**Notes**
 
-- eve already saves every uploaded file on bonkbot's computer at `/workspace/attachments/<id>/<filename>`. Because the computer is shared and persistent, files stay there across chats.
-- Images up to 3 MB and PDFs up to 20 MB are shown to the model directly, but the model is not told their path on the computer. Larger files and other types are passed as a path only, without their content.
-- The web chat sends files as message parts, but the composer has no attach button; only paste and drop are wired up, and neither has been tested.
+- eve saves every uploaded file on bonkbot's computer at `/workspace/attachments/<id>/<filename>`; files stay there across chats.
+- eve shows images and PDFs to the model without their path, so bonkbot's instructions tell it where uploads live. A per-message note with exact paths isn't possible: eve's instruction hooks don't see the incoming message.
+- The 3 MB limit comes from Vercel Functions accepting request bodies up to 4.5 MB, with files base64-encoded inside the message. Larger files would need a direct upload, e.g. to Blob.
+
+**Where it lives:** `app/_components/agent-chat.tsx`, `app/_lib/attachment-limits.ts`, `agent/instructions.md`.

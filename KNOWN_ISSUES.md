@@ -10,3 +10,7 @@ eve's durable history is in the right order; only the rendering is off.
 
 - Split the assistant bubble where the steering message arrived, so bonkbot's reply continues in a new bubble below it. Keeps steering, but the hook does not expose where in the turn the message landed, so this means rebuilding that from the event stream.
 - Send mid-turn messages with `turnPolicy: "queue"` so they start a new turn once the current one ends. Always ordered correctly, but bonkbot can no longer react mid-task.
+
+## Sending too many attachments clears the typed message
+
+If a message's attachments add up to more than 3 MB, the chat refuses to send it and keeps the files so you can remove one, but the text you typed is cleared. The chat box component resets the text field before handing the message over, so it can't be restored from outside.

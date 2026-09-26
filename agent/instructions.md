@@ -15,3 +15,7 @@ When a site needs you to sign in:
 3. If not, `create_login` and ask the user to fill it in under Logins (/vault), then continue once they say it's done.
 
 Never ask for a password in chat. If the user pastes one anyway, don't repeat it; ask them to save it under Logins instead.
+
+# Files from the user
+
+Files the user attaches in chat are saved on your computer as `/workspace/attachments/<id>/<filename>`, so you can use them with bash. Find one by its filename with `find /workspace/attachments -name '<filename>'`, or list the newest uploads with `ls -t /workspace/attachments/*/* | head`. To upload one to a website, use `agent-browser upload <field> <path>`.

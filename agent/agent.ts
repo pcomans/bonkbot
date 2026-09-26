@@ -1,5 +1,5 @@
 import { defineAgent } from "eve";
 
 export default defineAgent({
-  model: "anthropic/claude-opus-5.5",
+  model: "openai/gpt-6-sol-fast",
 });

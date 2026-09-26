@@ -2,7 +2,7 @@
 
 import type { UserContent } from "ai";
 import { useEveAgent } from "eve/react";
-import { AlertCircleIcon, BrainIcon, KeyRoundIcon, PlusIcon, SquareIcon } from "lucide-react";
+import { AlertCircleIcon, BrainIcon, FileIcon, KeyRoundIcon, PaperclipIcon, PlusIcon, SquareIcon, XIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
   Conversation,
@@ -14,6 +14,7 @@ import { Message, MessageContent } from "@/components/ai-elements/message";
 import {
   PromptInput,
   PromptInputButton,
+  PromptInputHeader,
   type PromptInputMessage,
   PromptInputSubmit,
   PromptInputTextarea,
@@ -26,6 +27,7 @@ import { AgentMessage } from "./agent-message";
 import { BonkbotIdle, BonkbotLogo } from "./bonkbot-art";
 import { ComputerScreen, ScreenToggle } from "./computer-screen";
 import { WEB_CHAT_AGENT } from "@/app/eve-agent";
+import { MAX_ATTACHMENT_BYTES, attachmentsTooLarge } from "@/app/_lib/attachment-limits";
 
 const DEFAULT_AGENT_NAME = "bonkbot";
 const SCREEN_OPEN_KEY = "bonkbot:screen-open";
@@ -39,6 +41,7 @@ export function AgentChat({
   readonly sessionless?: boolean;
 }) {
   const [cancellationError, setCancellationError] = useState<string>();
+  const [attachmentError, setAttachmentError] = useState<string>();
   const [hasInputText, setHasInputText] = useState(false);
   const [screenOpen, setScreenOpen] = useScreenOpen();
   const agent = useEveAgent({
@@ -91,6 +94,12 @@ export function AgentChat({
     const text = message.text.trim();
     if ((text.length === 0 && message.files.length === 0) || isResuming) return;
 
+    if (attachmentsTooLarge(message.files.map((file) => file.url))) {
+      setAttachmentError(TOO_LARGE);
+      // Throwing keeps the attachments in the composer so one can be removed.
+      throw new Error(TOO_LARGE);
+    }
+    setAttachmentError(undefined);
     setHasInputText(false);
     setCancellationError(undefined);
     const options = isBusy ? { turnPolicy: "steer" as const } : undefined;
@@ -117,12 +126,19 @@ export function AgentChat({
   };
 
   const composer = (
-    <PromptInput onSubmit={handleSubmit}>
+    <PromptInput
+      maxFileSize={MAX_ATTACHMENT_BYTES}
+      multiple
+      onError={(error) => setAttachmentError(error.code === "max_file_size" ? FILE_TOO_LARGE : error.message)}
+      onSubmit={handleSubmit}
+    >
+      <PendingAttachments error={attachmentError} onChange={() => setAttachmentError(undefined)} />
       <PromptInputTextarea
         disabled={isResuming}
         onChange={(event) => setHasInputText(event.currentTarget.value.trim().length > 0)}
         placeholder="Send a message…"
       />
+      <AttachButton disabled={isResuming} />
       <ComposerAction
         hasInputText={hasInputText}
         isBusy={isBusy}
@@ -213,6 +229,70 @@ export function AgentChat({
         <div className="w-full">{composer}</div>
       </div>
     </main>
+  );
+}
+
+const FILE_TOO_LARGE = "Files can be up to 3 MB.";
+const TOO_LARGE = "Attachments can be up to 3 MB per message in total. Remove one and try again.";
+
+function AttachButton({ disabled }: { readonly disabled: boolean }) {
+  const attachments = usePromptInputAttachments();
+  return (
+    <PromptInputButton
+      aria-label="Attach files"
+      className="absolute right-12 bottom-2.5"
+      disabled={disabled}
+      onClick={() => attachments.openFileDialog()}
+      tooltip="Attach files"
+    >
+      <PaperclipIcon className="size-4" />
+    </PromptInputButton>
+  );
+}
+
+/** Files attached to the message being written, each removable before sending. */
+function PendingAttachments({ error, onChange }: { readonly error?: string; readonly onChange: () => void }) {
+  const attachments = usePromptInputAttachments();
+  const count = attachments.files.length;
+  // A newly attached file means the user acted on the error.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: only react to the count
+  useEffect(() => {
+    if (count > 0) onChange();
+  }, [count]);
+  if (count === 0 && !error) return null;
+
+  return (
+    <PromptInputHeader className="flex-wrap gap-2">
+      {attachments.files.map((file) => (
+        <span className="flex max-w-48 items-center gap-2 rounded-md border bg-background p-1 pr-1.5 text-xs" key={file.id}>
+          {file.mediaType?.startsWith("image/") && file.url ? (
+            // biome-ignore lint/performance/noImgElement: local blob preview
+            <img alt="" className="size-8 shrink-0 rounded-sm object-cover" src={file.url} />
+          ) : (
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-sm bg-muted text-muted-foreground">
+              <FileIcon className="size-4" />
+            </span>
+          )}
+          <span className="min-w-0 truncate">{file.filename ?? "Attachment"}</span>
+          <button
+            aria-label={`Remove ${file.filename ?? "attachment"}`}
+            className="shrink-0 rounded-sm p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+            onClick={() => {
+              attachments.remove(file.id);
+              onChange();
+            }}
+            type="button"
+          >
+            <XIcon className="size-3.5" />
+          </button>
+        </span>
+      ))}
+      {error ? (
+        <p className="w-full text-destructive text-xs" role="alert">
+          {error}
+        </p>
+      ) : null}
+    </PromptInputHeader>
   );
 }
 
