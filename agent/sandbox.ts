@@ -2,6 +2,7 @@ import { Sandbox } from "@vercel/sandbox";
 import { defineSandbox } from "eve/sandbox";
 import { defineSandboxProvider } from "eve/sandbox/provider";
 import { VercelSandbox } from "eve/sandbox/vercel";
+import { provisionComputer } from "./lib/computer-setup";
 import { createSharedComputer, type InnerImplementation } from "./lib/shared-computer";
 
 const COMPUTER_NAME = "bonkbot-computer";
@@ -25,6 +26,7 @@ const SharedVercelComputer = defineSandboxProvider({
         const base = { name, persistent: true, timeout: COMPUTER_TIMEOUT_MS };
         await Sandbox.getOrCreate(snapshotId ? { ...base, source: { type: "snapshot", snapshotId } } : base);
       },
+      provision: provisionComputer,
     });
   },
 });

@@ -80,4 +80,43 @@ describe("createSharedComputer", () => {
     expect(innerHandle.onSessionDelete).not.toHaveBeenCalled();
     expect(innerHandle.onRuntimeShutdown).not.toHaveBeenCalled();
   });
+
+  it("provisions the computer with the attached sandbox", async () => {
+    const { inner, sandbox } = fakeInner();
+    const provision = vi.fn(async () => {});
+    const computer = createSharedComputer({ name: "bonkbot-computer", inner, ensureComputer: vi.fn(), provision });
+
+    await computer.start(ctx("s"), undefined, { snapshotId: "snap_1" });
+
+    expect(provision).toHaveBeenCalledWith(sandbox);
+  });
+
+  it("ensures and provisions only once per process", async () => {
+    const { inner } = fakeInner();
+    const ensureComputer = vi.fn(async () => {});
+    const provision = vi.fn(async () => {});
+    const computer = createSharedComputer({ name: "bonkbot-computer", inner, ensureComputer, provision });
+    const state = { sandboxName: "bonkbot-computer", version: 3 } as const;
+
+    await computer.start(ctx("a"), undefined, {});
+    await computer.resume(ctx("a"), {}, state);
+    await computer.resume(ctx("b"), {}, state);
+
+    expect(ensureComputer).toHaveBeenCalledTimes(1);
+    expect(provision).toHaveBeenCalledTimes(1);
+    expect(inner.resume).toHaveBeenCalledTimes(3);
+  });
+
+  it("retries ensure and provision after a failed attach", async () => {
+    const { inner } = fakeInner();
+    const ensureComputer = vi.fn(async () => {});
+    const provision = vi.fn().mockRejectedValueOnce(new Error("apt down")).mockResolvedValue(undefined);
+    const computer = createSharedComputer({ name: "bonkbot-computer", inner, ensureComputer, provision });
+
+    await expect(computer.start(ctx("a"), undefined, {})).rejects.toThrow("apt down");
+    await computer.start(ctx("a"), undefined, {});
+
+    expect(ensureComputer).toHaveBeenCalledTimes(2);
+    expect(provision).toHaveBeenCalledTimes(2);
+  });
 });

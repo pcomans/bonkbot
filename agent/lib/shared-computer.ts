@@ -15,6 +15,7 @@ export type InnerImplementation = SandboxProviderImplementation<
 >;
 
 export type EnsureComputer = (input: { name: string; snapshotId: string | undefined }) => Promise<void>;
+export type ProvisionComputer = (sandbox: SandboxProviderHandle["sandbox"]) => Promise<void>;
 
 type SessionState = { sandboxName: string; version: 3 };
 
@@ -22,24 +23,38 @@ type SessionState = { sandboxName: string; version: 3 };
  * Wraps eve's session-owned Vercel sandbox so every session shares one named,
  * persistent sandbox: the bot's computer. Sessions come and go; the computer
  * is never stopped or deleted by them and idles out on its own timeout.
+ *
+ * `ensureComputer` and `provision` run once per process; a failed attach
+ * clears that memo so the next attach retries both.
  */
 export function createSharedComputer({
   name,
   inner,
   ensureComputer,
+  provision = async () => {},
 }: {
   name: string;
   inner: InnerImplementation;
   ensureComputer: EnsureComputer;
+  provision?: ProvisionComputer;
 }): SandboxProviderImplementation<object | undefined, SandboxPreparedArtifact, SessionState> {
   const state: SessionState = { sandboxName: name, version: 3 };
+  let ensured: Promise<void> | null = null;
+  let provisioned: Promise<void> | null = null;
 
   async function attach(
     context: Parameters<InnerImplementation["resume"]>[0],
     artifact: Readonly<SandboxPreparedArtifact>,
   ): Promise<SandboxProviderHandle> {
-    await ensureComputer({ name, snapshotId: snapshotIdOf(artifact) });
-    const handle = await inner.resume(context, artifact, state);
+    let handle: SandboxProviderHandle;
+    try {
+      await (ensured ??= ensureComputer({ name, snapshotId: snapshotIdOf(artifact) }));
+      handle = await inner.resume(context, artifact, state);
+      await (provisioned ??= provision(handle.sandbox));
+    } catch (error) {
+      ensured = provisioned = null;
+      throw error;
+    }
     return {
       sandbox: handle.sandbox,
       async onSessionStop() {},
