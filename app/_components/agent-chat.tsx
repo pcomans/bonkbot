@@ -23,6 +23,7 @@ import { Shimmer } from "@/components/ai-elements/shimmer";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { AgentMessage } from "./agent-message";
+import { BonkbotIdle, BonkbotLogo } from "./bonkbot-art";
 import { ComputerScreen, ScreenToggle } from "./computer-screen";
 import { WEB_CHAT_AGENT } from "@/app/eve-agent";
 
@@ -198,7 +199,7 @@ export function AgentChat({
       >
         {showConversationLayout ? null : (
           <div className="flex flex-col items-center gap-3 text-center">
-            <BonkbotLogo className="size-28" />
+            <BonkbotIdle className="size-40" />
             <h1 className="font-medium text-5xl tracking-tighter">{AGENT_NAME}</h1>
           </div>
         )}
@@ -292,11 +293,6 @@ function ChatHeader({
       </div>
     </header>
   );
-}
-
-function BonkbotLogo({ className }: { readonly className?: string }) {
-  // biome-ignore lint/performance/noImgElement: small static logo
-  return <img alt="" className={cn("dark:invert", className)} src="/bonkbot.png" />;
 }
 
 /** Whether the screen panel is open, remembered per browser. */

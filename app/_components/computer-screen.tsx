@@ -4,6 +4,7 @@ import { MonitorIcon, XIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { BonkbotIdle } from "./bonkbot-art";
 
 const POLL_MS = 2500;
 
@@ -11,7 +12,7 @@ type Screen = { state: "loading" | "asleep" | "no-browser" | "error" } | { state
 
 const MESSAGES: Record<Exclude<Screen["state"], "live">, string> = {
   loading: "Connecting to the computer…",
-  asleep: "The computer is asleep. It wakes up when bonkbot needs it.",
+  asleep: "bonkbot's computer is asleep. It wakes up when bonkbot needs it.",
   "no-browser": "No browser open yet.",
   error: "Could not reach the computer.",
 };
@@ -80,12 +81,15 @@ export function ComputerScreen({ open, onClose }: { readonly open: boolean; read
           <XIcon className="size-4" />
         </Button>
       </div>
-      <div className="flex aspect-video items-center justify-center bg-muted/40">
+      <div className="flex aspect-video items-center justify-center bg-background">
         {screen.state === "live" ? (
           // biome-ignore lint/performance/noImgElement: blob URL frames
           <img alt="bonkbot's browser" className="size-full object-contain" src={screen.url} />
         ) : (
-          <p className="px-6 text-center text-muted-foreground text-sm">{MESSAGES[screen.state]}</p>
+          <div className="flex flex-col items-center gap-2 px-6 text-center">
+            {screen.state === "asleep" ? <BonkbotIdle className="size-28" /> : null}
+            <p className="text-muted-foreground text-sm">{MESSAGES[screen.state]}</p>
+          </div>
         )}
       </div>
     </aside>
