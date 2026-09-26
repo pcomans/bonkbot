@@ -21,7 +21,7 @@ const mono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "bonkbot",
-  description: "An AI teammate with its own computer.",
+  description: "Knock out some tasks!",
 };
 
 export default function RootLayout({ children }: { readonly children: ReactNode }) {

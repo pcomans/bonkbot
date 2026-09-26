@@ -2,6 +2,8 @@
 
 # bonkbot
 
+**Knock out some tasks!**
+
 An AI teammate with its own persistent computer, in the spirit of xAI's Grok Bot, built on [eve](https://eve.dev) and Vercel.
 
 - **Its own computer.** Every conversation shares one persistent [Vercel Sandbox](https://vercel.com/docs/sandbox) (`bonkbot-computer`). Files, installed programs, and browser logins survive between chats and across the computer sleeping and waking.

@@ -207,6 +207,7 @@ export function AgentChat({
           <div className="flex flex-col items-center gap-3 text-center">
             <BonkbotIdle className="size-40" />
             <h1 className="font-medium text-5xl tracking-tighter">{AGENT_NAME}</h1>
+            <p className="text-lg text-muted-foreground">Knock out some tasks!</p>
           </div>
         )}
         <div className="w-full">{composer}</div>
